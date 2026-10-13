@@ -166,6 +166,46 @@ describe("Jobnet search normalization", () => {
   });
 });
 
+describe("Jobnet external ads link to the employer's page (#538)", () => {
+  // External ads (isExternal: true) are hosted by the employer: /find-job/<id>
+  // answers 404 for them, and /FindJob/Search returns the real destination as
+  // jobAdUrl. Internal ads carry jobAdUrl: "" and keep the jobnet.dk route.
+  function withExternalUrl(jobAdUrl: string | null | undefined) {
+    const data = apiResponse();
+    data.jobAds[1].jobAdUrl = jobAdUrl;
+    data.jobAds[0].jobAdUrl = "";
+    return createSearchOutput(data, { ...flags, limit: undefined }).results;
+  }
+
+  test("an external ad's url is its jobAdUrl, and jobAdUrl is passed through", () => {
+    const results = withExternalUrl("  https://careers.example.test/jobs/357594?locale=da_DK  ");
+
+    expect(results[1].url).toBe("https://careers.example.test/jobs/357594?locale=da_DK");
+    expect(results[1].jobAdUrl).toBe("https://careers.example.test/jobs/357594?locale=da_DK");
+  });
+
+  test("an internal ad keeps the jobnet.dk route and reports no jobAdUrl", () => {
+    const results = withExternalUrl("https://careers.example.test/jobs/1");
+
+    expect(results[0].url).toBe("https://jobnet.dk/find-job/job-1");
+    expect(results[0].jobAdUrl).toBeNull();
+  });
+
+  test.each([undefined, null, "", "   "])(
+    "an external ad without a jobAdUrl (%p) falls back to the jobnet.dk route",
+    (jobAdUrl) => {
+      expect(withExternalUrl(jobAdUrl)[1].url).toBe("https://jobnet.dk/find-job/job-2");
+    },
+  );
+
+  test.each(["javascript:alert(1)", "file:///C:/Windows/win.ini", "/relative/path", "not a url"])(
+    "a jobAdUrl that is not an absolute http(s) URL (%p) is not emitted as url",
+    (jobAdUrl) => {
+      expect(withExternalUrl(jobAdUrl)[1].url).toBe("https://jobnet.dk/find-job/job-2");
+    },
+  );
+});
+
 describe("Jobnet null publicationDate degradation", () => {
   // publicationDate: string was a TypeScript claim, not runtime validation -
   // apiFetch casts the JSON body, so one ad with a null publication date

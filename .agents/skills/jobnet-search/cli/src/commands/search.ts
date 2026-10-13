@@ -27,6 +27,8 @@ export interface JobAdRaw {
   applicationDeadlineStatus: string | null
   workHourPartTime: boolean
   isExternal: boolean
+  // The employer's own page for an external ad; "" for ads hosted on jobnet.dk.
+  jobAdUrl?: string | null
   hasLogo: boolean
   logoUrl: string | null
   cvr: string | null
@@ -83,6 +85,24 @@ export function buildSearchParams(flags: SearchFlags): Record<string, string> {
   return params
 }
 
+/**
+ * The link for an external ad (#538). External ads are not hosted on
+ * jobnet.dk - /find-job/<id> answers 404 for them - and the search API returns
+ * the employer's own page as jobAdUrl. Only an absolute http(s) URL is used:
+ * the value is employer-supplied and downstream steps fetch it. Anything else
+ * returns null and the caller keeps the jobnet.dk route.
+ */
+export function externalAdUrl(job: Pick<JobAdRaw, "isExternal" | "jobAdUrl">): string | null {
+  const raw = job.jobAdUrl?.trim()
+  if (!job.isExternal || !raw) return null
+  try {
+    const { protocol } = new URL(raw)
+    return protocol === "https:" || protocol === "http:" ? raw : null
+  } catch {
+    return null
+  }
+}
+
 export function createSearchOutput(data: SearchApiResponse, flags: SearchFlags) {
   let results = data.jobAds.map((job) => ({
     jobAdId: job.jobAdId,
@@ -98,6 +118,7 @@ export function createSearchOutput(data: SearchApiResponse, flags: SearchFlags) 
     applicationDeadlineStatus: job.applicationDeadlineStatus ?? null,
     workHourPartTime: job.workHourPartTime,
     isExternal: job.isExternal,
+    jobAdUrl: job.jobAdUrl?.trim() || null,
     hasLogo: job.hasLogo,
     logoUrl: job.logoUrl ?? null,
     cvr: job.cvr ?? null,
@@ -114,7 +135,7 @@ export function createSearchOutput(data: SearchApiResponse, flags: SearchFlags) 
     deadline: job.applicationDeadline && !job.applicationDeadline.startsWith("1900-01-01")
       ? job.applicationDeadline.slice(0, 10)
       : null,
-    url: `https://jobnet.dk/find-job/${job.jobAdId}`,
+    url: externalAdUrl(job) ?? `https://jobnet.dk/find-job/${job.jobAdId}`,
   }))
 
   if (flags.limit !== undefined) {

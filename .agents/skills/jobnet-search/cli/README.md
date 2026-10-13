@@ -141,6 +141,7 @@ bun run src/cli.ts search \
       "applicationDeadlineStatus": "ExpirationDate",
       "workHourPartTime": false,
       "isExternal": false,
+      "jobAdUrl": null,
       "hasLogo": true,
       "logoUrl": "/bff/SharedComponents/JobAdCard/CompanyLogo/ByJobAdId/9ef43bce-d82b-4ea1-a098-7ff6520f99be",
       "cvr": "29190925",
@@ -361,9 +362,12 @@ https://jobnet.dk/find-job/{jobAdId}
 ```
 
 The legacy `https://jobnet.dk/job/{jobAdId}` route redirects anonymous visitors into the
-MitID login flow, so it is never emitted. External ads (`isExternal: true`, jobAdIds with an
-`E` prefix) 404 on `/find-job/` and hit the login wall on `/job/` - neither route serves them
-anonymously; `/find-job/` is still strictly better and external ads are left as-is.
+MitID login flow, so it is never emitted. External ads (`isExternal: true`) are hosted by the
+employer: they 404 on `/find-job/` and hit the login wall on `/job/`. For those, `search`
+emits the employer's own page, which the API returns as `jobAdUrl`, as `url` - the same
+value `detail` reports as `application.url`. An external ad whose `jobAdUrl` is empty or not
+an absolute http(s) URL keeps the `/find-job/` route. `jobAdUrl` is also passed through on
+every result (`null` for ads hosted on jobnet.dk).
 
 Company logo images (prefix relative logoUrl from API):
 

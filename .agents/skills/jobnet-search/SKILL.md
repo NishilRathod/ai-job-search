@@ -202,5 +202,5 @@ All errors are written to **stderr** as `{ "error": "...", "code": "..." }` and 
 - Pagination is 1-indexed (`--page 1` is the first page).
 - `search` results omit the HTML job description — use `detail` to get it.
 - `detail --format plain` strips HTML tags for readable text output.
-- Job ad detail pages on jobnet.dk: `https://jobnet.dk/find-job/{jobAdId}`
+- Job ad detail pages on jobnet.dk: `https://jobnet.dk/find-job/{jobAdId}`. External ads (`isExternal: true`) 404 there, so `search` gives them the employer's page from `jobAdUrl` as `url` instead.
 - `suggestions` is tuned for Danish job titles — English terms may return empty results.
