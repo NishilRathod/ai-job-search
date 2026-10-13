@@ -15,6 +15,17 @@ per-file diff commands.
 
 ### Fixed
 
+- **`jobnet-search` links external ads to the employer's page instead of a 404** (#538,
+  `.agents/skills/jobnet-search/cli/src/commands/search.ts`) - external ads (`isExternal: true`)
+  are hosted by the employer and `https://jobnet.dk/find-job/<id>` answers 404 for them, but
+  `search` built that URL for every result. The search API already returns the real
+  destination as `jobAdUrl` (which `detail` maps to `application.url`); `search` dropped it.
+  On a live search, 13 of the newest 20 results were external, so `/rank` fetched a dead
+  page for most of them. `search` now emits `jobAdUrl` as `url` for external ads when it is
+  an absolute http(s) URL, and passes `jobAdUrl` through on every result (`null` for ads on
+  jobnet.dk); jobnet.dk ads, and external ads with no usable `jobAdUrl`, keep `/find-job/`.
+  Reported by @ai-tvang.
+
 - **`/reset profile` now targets the headings the shipped skill files actually have**
   (`.claude/commands/reset.md` Step 3, `tests/test_reset_command.py`) - two of its Step 3
   targets had drifted. The `05-cv-templates.md` step anchored on a section beginning
